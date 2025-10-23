@@ -78,18 +78,35 @@ class SimConnectService {
     this.handle.on('simObjectData', (recvSimObjectData) => {
       if (recvSimObjectData.requestID === this.DATA_REQUEST_ID) {
         try {
+          const data = recvSimObjectData.data;
+          
           this.currentData = {
-            latitude: recvSimObjectData.data.readFloat64(),
-            longitude: recvSimObjectData.data.readFloat64(),
-            altitude: recvSimObjectData.data.readFloat64(),
-            indicatedAltitude: recvSimObjectData.data.readFloat64(),
-            groundSpeed: recvSimObjectData.data.readFloat64(),
-            indicatedAirspeed: recvSimObjectData.data.readFloat64(),
-            heading: recvSimObjectData.data.readFloat64(),
-            verticalSpeed: recvSimObjectData.data.readFloat64(),
-            onGround: recvSimObjectData.data.readInt32() === 1,
-            fuel: recvSimObjectData.data.readFloat64()
+            latitude: data.readFloat64(),
+            longitude: data.readFloat64(),
+            altitude: data.readFloat64(),
+            indicatedAltitude: data.readFloat64(),
+            groundSpeed: data.readFloat64(),
+            indicatedAirspeed: data.readFloat64(),
+            heading: data.readFloat64(),
+            verticalSpeed: data.readFloat64(),
+            onGround: data.readInt32() === 1,
+            fuel: data.readFloat64()
           };
+
+          // Debug log every 60 seconds (60 updates)
+          if (!this.debugCounter) this.debugCounter = 0;
+          this.debugCounter++;
+          if (this.debugCounter >= 10) {
+            console.log('📍 [SimConnect Data]', {
+              lat: this.currentData.latitude.toFixed(6),
+              lon: this.currentData.longitude.toFixed(6),
+              alt: Math.round(this.currentData.altitude),
+              vs: Math.round(this.currentData.verticalSpeed),
+              speed: Math.round(this.currentData.groundSpeed),
+              onGround: this.currentData.onGround
+            });
+            this.debugCounter = 0;
+          }
         } catch (error) {
           console.error('[Main] Error reading SimConnect data:', error);
         }
@@ -112,81 +129,107 @@ class SimConnectService {
   }
 
   setupDataDefinitions() {
+    // Add data definitions with epsilon and datumID parameters
     this.handle.addToDataDefinition(
       this.DATA_DEFINITION_ID,
-      'PLANE LATITUDE',
+      'Plane Latitude',
       'degrees',
-      SimConnectDataType.FLOAT64
+      SimConnectDataType.FLOAT64,
+      0.0,
+      SimConnectConstants.UNUSED
     );
 
     this.handle.addToDataDefinition(
       this.DATA_DEFINITION_ID,
-      'PLANE LONGITUDE',
+      'Plane Longitude',
       'degrees',
-      SimConnectDataType.FLOAT64
+      SimConnectDataType.FLOAT64,
+      0.0,
+      SimConnectConstants.UNUSED
     );
 
     this.handle.addToDataDefinition(
       this.DATA_DEFINITION_ID,
-      'PLANE ALTITUDE',
+      'Plane Altitude',
       'feet',
-      SimConnectDataType.FLOAT64
+      SimConnectDataType.FLOAT64,
+      0.0,
+      SimConnectConstants.UNUSED
     );
 
     this.handle.addToDataDefinition(
       this.DATA_DEFINITION_ID,
-      'INDICATED ALTITUDE',
+      'Indicated Altitude',
       'feet',
-      SimConnectDataType.FLOAT64
+      SimConnectDataType.FLOAT64,
+      0.0,
+      SimConnectConstants.UNUSED
     );
 
     this.handle.addToDataDefinition(
       this.DATA_DEFINITION_ID,
-      'GROUND VELOCITY',
+      'Ground Velocity',
       'knots',
-      SimConnectDataType.FLOAT64
+      SimConnectDataType.FLOAT64,
+      0.0,
+      SimConnectConstants.UNUSED
     );
 
     this.handle.addToDataDefinition(
       this.DATA_DEFINITION_ID,
-      'AIRSPEED INDICATED',
+      'Airspeed Indicated',
       'knots',
-      SimConnectDataType.FLOAT64
+      SimConnectDataType.FLOAT64,
+      0.0,
+      SimConnectConstants.UNUSED
     );
 
     this.handle.addToDataDefinition(
       this.DATA_DEFINITION_ID,
-      'PLANE HEADING DEGREES TRUE',
+      'Plane Heading Degrees True',
       'degrees',
-      SimConnectDataType.FLOAT64
+      SimConnectDataType.FLOAT64,
+      0.0,
+      SimConnectConstants.UNUSED
     );
 
     this.handle.addToDataDefinition(
       this.DATA_DEFINITION_ID,
-      'VERTICAL SPEED',
+      'Vertical Speed',
       'feet per minute',
-      SimConnectDataType.FLOAT64
+      SimConnectDataType.FLOAT64,
+      0.0,
+      SimConnectConstants.UNUSED
     );
 
     this.handle.addToDataDefinition(
       this.DATA_DEFINITION_ID,
-      'SIM ON GROUND',
+      'Sim On Ground',
       'bool',
-      SimConnectDataType.INT32
+      SimConnectDataType.INT32,
+      0.0,
+      SimConnectConstants.UNUSED
     );
 
     this.handle.addToDataDefinition(
       this.DATA_DEFINITION_ID,
-      'FUEL TOTAL QUANTITY',
+      'Fuel Total Quantity',
       'percent',
-      SimConnectDataType.FLOAT64
+      SimConnectDataType.FLOAT64,
+      0.0,
+      SimConnectConstants.UNUSED
     );
 
+    // Request data every second with all parameters
     this.handle.requestDataOnSimObject(
       this.DATA_REQUEST_ID,
       this.DATA_DEFINITION_ID,
       SimConnectConstants.OBJECT_ID_USER,
-      SimConnectPeriod.SECOND
+      SimConnectPeriod.SECOND,
+      0,
+      0,
+      0,
+      0
     );
 
     console.log('✅ [Main] SimConnect data definitions configured');

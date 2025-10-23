@@ -382,42 +382,50 @@ body {
 
 .progress-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   margin-bottom: 15px;
 }
 
-.progress-bar-container {
-  width: 100%;
-  height: 30px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 15px;
-  overflow: hidden;
-  position: relative;
+.progress-header h3 {
+  color: var(--primary-color);
+  font-size: 18px;
+  font-weight: 600;
 }
 
-.progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, var(--primary-color) 0%, var(--accent-color) 100%);
-  transition: width 0.5s ease;
+.progress-phase {
+  background: rgba(111, 214, 251, 0.1);
+  border: 2px solid var(--primary-color);
+  border-radius: 15px;
+  padding: 20px;
+}
+
+.phase-indicator {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  padding-right: 15px;
+  justify-content: center;
+  gap: 15px;
 }
 
-.progress-plane {
+.phase-icon {
+  font-size: 32px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.phase-text {
   font-size: 20px;
+  font-weight: 600;
+  color: var(--primary-color);
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-.progress-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 14px;
-  font-weight: 600;
-  color: white;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
 }
 
 /* Action Buttons */

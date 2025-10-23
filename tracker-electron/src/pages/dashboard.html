@@ -99,14 +99,13 @@
         <!-- Flight Progress (shown during flight) -->
         <div id="flightProgress" class="flight-progress" style="display: none;">
           <div class="progress-header">
-            <h3>Flight Progress</h3>
-            <span id="progressPercentage">0%</span>
+            <h3>Flight Phase</h3>
           </div>
-          <div class="progress-bar-container">
-            <div class="progress-bar" id="progressBar" style="width: 0%;">
-              <span class="progress-plane">✈️</span>
+          <div class="progress-phase">
+            <div class="phase-indicator">
+              <span class="phase-icon">✈️</span>
+              <span class="phase-text" id="progressText">Waiting for departure</span>
             </div>
-            <div class="progress-text" id="progressText">Waiting for departure</div>
           </div>
         </div>
 
@@ -348,14 +347,7 @@
 
     // Update flight progress
     function updateProgress(data) {
-      const progressBar = document.getElementById('progressBar');
-      const progressPercentage = document.getElementById('progressPercentage');
       const progressText = document.getElementById('progressText');
-
-      const percentage = Math.min(100, Math.max(0, data.progress || 0));
-      
-      progressBar.style.width = `${percentage}%`;
-      progressPercentage.textContent = `${percentage.toFixed(1)}%`;
       
       if (data.phase) {
         progressText.textContent = data.phase;

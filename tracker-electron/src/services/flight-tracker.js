@@ -39,8 +39,10 @@ class FlightTracker {
     this.lastState = { ...this.currentState };
     this.hasStarted = false;
     this.hasLanded = false;
+    this.touchdownDetected = false; // Track if touchdown has been captured
 
     this.onUpdate = null;
+    this.telemetryCounter = 0; // Counter for telemetry storage (every 20 seconds)
   }
 
   async start() {
@@ -123,8 +125,40 @@ class FlightTracker {
       // Get current flight data from simulator
       const data = await this.simulator.getData();
       
+      // Save previous state BEFORE updating
+      const previousState = this.lastState ? { ...this.lastState } : null;
+      
       // Update current state
       this.currentState = { ...data };
+
+      // Debug: Log state transitions
+      if (previousState && previousState.onGround !== this.currentState.onGround) {
+        console.log('🔄 Ground state changed:', {
+          from: previousState.onGround ? 'ON GROUND' : 'IN AIR',
+          to: this.currentState.onGround ? 'ON GROUND' : 'IN AIR',
+          altitude: this.currentState.altitude,
+          vs: this.currentState.verticalSpeed,
+          previousVS: previousState.verticalSpeed
+        });
+      }
+
+      // Detect touchdown FIRST (before phase changes)
+      if (previousState && !previousState.onGround && this.currentState.onGround && !this.touchdownDetected) {
+        const touchdownVS = Math.abs(previousState.verticalSpeed);
+        
+        if (touchdownVS > 0 && touchdownVS < 2000) {
+          this.flightData.landingRate = touchdownVS;
+          this.touchdownDetected = true;
+          
+          console.log('🛬🛬🛬 TOUCHDOWN DETECTED! 🛬🛬🛬');
+          console.log('   Landing Rate:', touchdownVS.toFixed(2), 'fpm');
+          console.log('   Last altitude:', previousState.altitude, 'ft');
+          console.log('   Ground speed:', this.currentState.groundSpeed, 'kts');
+          console.log('   Previous VS:', previousState.verticalSpeed);
+          console.log('   Was on ground:', previousState.onGround);
+          console.log('   Now on ground:', this.currentState.onGround);
+        }
+      }
 
       // Calculate flight progress
       this.calculateProgress();
@@ -135,7 +169,7 @@ class FlightTracker {
       // Calculate statistics
       this.calculateStats();
 
-      // Store telemetry point
+      // Store telemetry point EVERY SECOND for complete data
       this.storeTelemetry();
 
       // Update UI callback
@@ -177,6 +211,24 @@ class FlightTracker {
 
   detectPhase() {
     const { onGround, altitude, verticalSpeed, groundSpeed } = this.currentState;
+    const wasInAir = !this.lastState.onGround;
+
+    // Detect touchdown moment: was in air, now on ground (only once!)
+    if (wasInAir && onGround && this.hasStarted && !this.touchdownDetected) {
+      // Capture landing rate at exact touchdown moment
+      // Use lastState verticalSpeed (last moment in air before wheels touch)
+      const touchdownVS = Math.abs(this.lastState.verticalSpeed);
+      
+      // Only capture if it's a realistic landing rate (not a glitch)
+      if (touchdownVS > 0 && touchdownVS < 2000) {
+        this.flightData.landingRate = touchdownVS;
+        this.touchdownDetected = true; // Mark as captured
+        console.log('🛬 TOUCHDOWN DETECTED! Landing Rate:', this.flightData.landingRate.toFixed(2), 'fpm');
+        console.log('   Last VS in air:', this.lastState.verticalSpeed.toFixed(2));
+        console.log('   Altitude at touchdown:', this.currentState.altitude.toFixed(2));
+        console.log('   Ground speed:', this.currentState.groundSpeed.toFixed(2));
+      }
+    }
 
     if (onGround && groundSpeed < 5 && !this.hasStarted) {
       this.flightData.phase = 'Preflight';
@@ -194,10 +246,6 @@ class FlightTracker {
       this.flightData.phase = 'Approach';
     } else if (onGround && this.hasStarted && groundSpeed > 30) {
       this.flightData.phase = 'Landing';
-      // Capture landing rate
-      if (this.lastState.verticalSpeed < 0) {
-        this.flightData.landingRate = Math.abs(this.lastState.verticalSpeed);
-      }
     } else if (onGround && this.hasStarted && groundSpeed < 30) {
       this.flightData.phase = 'Taxi to Gate';
     } else if (onGround && this.hasStarted && groundSpeed < 5) {
@@ -239,11 +287,42 @@ class FlightTracker {
   }
 
   storeTelemetry() {
-    // Store telemetry point (limit to avoid memory issues)
-    if (this.flightData.telemetry.length < 10000) {
-      this.flightData.telemetry.push({
-        timestamp: new Date().toISOString(),
-        ...this.currentState,
+    // Only store valid telemetry points
+    const { latitude, longitude, altitude } = this.currentState;
+    
+    // Skip invalid coordinates (0,0 or NaN means SimConnect not ready yet)
+    if (!latitude || !longitude || latitude === 0 || longitude === 0 || 
+        isNaN(latitude) || isNaN(longitude)) {
+      return;
+    }
+
+    // Validate coordinates are in reasonable range
+    if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+      console.warn('⚠️ Invalid coordinates detected:', { latitude, longitude });
+      return;
+    }
+
+    const isFirstPoint = this.flightData.telemetry.length === 0;
+
+    // Store telemetry point (EVERY SECOND for complete tracking)
+    this.flightData.telemetry.push({
+      timestamp: new Date().toISOString(),
+      latitude: parseFloat(latitude.toFixed(6)),
+      longitude: parseFloat(longitude.toFixed(6)),
+      altitude: Math.round(altitude),
+      groundSpeed: Math.round(this.currentState.groundSpeed),
+      heading: Math.round(this.currentState.heading),
+      verticalSpeed: Math.round(this.currentState.verticalSpeed),
+      fuel: parseFloat(this.currentState.fuel.toFixed(1)),
+      onGround: this.currentState.onGround,
+      phase: this.flightData.phase
+    });
+
+    if (isFirstPoint) {
+      console.log('✅ First telemetry point captured:', { 
+        latitude: latitude.toFixed(6), 
+        longitude: longitude.toFixed(6), 
+        altitude: Math.round(altitude),
         phase: this.flightData.phase
       });
     }
@@ -276,6 +355,31 @@ class FlightTracker {
     // Capture current time as arrival time
     const arrivalTime = new Date();
 
+    // Force capture last telemetry point if valid
+    if (this.currentState.latitude && this.currentState.longitude &&
+        this.currentState.latitude !== 0 && this.currentState.longitude !== 0) {
+      
+      // Check if we need to add final point
+      const lastPoint = this.flightData.telemetry[this.flightData.telemetry.length - 1];
+      const needsLastPoint = !lastPoint || 
+        lastPoint.latitude !== this.currentState.latitude ||
+        lastPoint.longitude !== this.currentState.longitude;
+      
+      if (needsLastPoint) {
+        this.flightData.telemetry.push({
+          timestamp: new Date().toISOString(),
+          latitude: this.currentState.latitude,
+          longitude: this.currentState.longitude,
+          altitude: this.currentState.altitude,
+          groundSpeed: this.currentState.groundSpeed,
+          heading: this.currentState.heading,
+          verticalSpeed: this.currentState.verticalSpeed,
+          fuel: this.currentState.fuel,
+          phase: 'Arrived'
+        });
+      }
+    }
+
     const reportData = {
       actual_departure_time: formatDateTime(this.flightData.departureTime),
       actual_arrival_time: formatDateTime(arrivalTime),
@@ -286,11 +390,26 @@ class FlightTracker {
       telemetry_data: {
         max_altitude: this.flightData.maxAltitude || 0,
         max_speed: this.flightData.maxSpeed || 0,
-        telemetry_points: this.flightData.telemetry.slice(0, 100) // Limit to 100 points
+        telemetry_points: this.flightData.telemetry // ALL telemetry points (every second)
       }
     };
 
-    console.log('📊 Flight report data:', reportData);
+    console.log('\n========================================');
+    console.log('📊 FLIGHT REPORT SUMMARY');
+    console.log('========================================');
+    console.log('Departure:', reportData.actual_departure_time);
+    console.log('Arrival:', reportData.actual_arrival_time);
+    console.log('Duration:', reportData.flight_duration, 'minutes');
+    console.log('Distance:', reportData.distance_flown, 'NM');
+    console.log('Fuel Used:', reportData.fuel_used, 'kg/lbs');
+    console.log('Landing Rate:', reportData.landing_rate, 'fpm', this.touchdownDetected ? '✅' : '❌ NOT DETECTED');
+    console.log('Max Altitude:', reportData.telemetry_data.max_altitude, 'ft');
+    console.log('Max Speed:', reportData.telemetry_data.max_speed, 'kts');
+    console.log('Telemetry Points:', reportData.telemetry_data.telemetry_points.length, '(1 per second)');
+    console.log('First Point:', reportData.telemetry_data.telemetry_points[0]);
+    console.log('Last Point:', reportData.telemetry_data.telemetry_points[reportData.telemetry_data.telemetry_points.length - 1]);
+    console.log('========================================\n');
+    
     return reportData;
   }
 }
