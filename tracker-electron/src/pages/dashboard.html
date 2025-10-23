@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlyNova ACARS - Dashboard</title>
+  <link rel="stylesheet" href="../styles/main.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <img src="../../logos/logo_flynova.png" alt="FlyNova" class="header-logo">
+        <div class="header-title">
+          <h2>FlyNova ACARS</h2>
+          <p>Flight Tracking System</p>
+        </div>
+      </div>
+      <div class="user-info">
+        <div class="user-name">
+          <p id="userName">Pilote</p>
+          <span id="userStatus">En ligne</span>
+        </div>
+        <button class="btn-logout" onclick="logout()">Déconnexion</button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+      <!-- Loading State -->
+      <div id="loadingState" class="loading">
+        <div class="spinner"></div>
+        <p>Chargement de votre réservation...</p>
+      </div>
+
+      <!-- No Reservation State -->
+      <div id="noReservationState" class="no-reservation" style="display: none;">
+        <div class="no-reservation-icon">✈️</div>
+        <h3>Aucune réservation active</h3>
+        <p>Vous n'avez actuellement aucun vol réservé.</p>
+        <p>Rendez-vous sur le site FlyNova pour réserver un vol.</p>
+      </div>
+
+      <!-- Reservation Card -->
+      <div id="reservationCard" class="reservation-card" style="display: none;">
+        <!-- VA Branding Bar -->
+        <div class="va-branding" id="vaBrandingBar"></div>
+
+        <!-- Reservation Header -->
+        <div class="reservation-header">
+          <div class="va-info">
+            <img id="vaLogo" class="va-logo" src="" alt="VA Logo">
+            <div class="va-details">
+              <h3 id="vaName">Virtual Airline</h3>
+              <p id="vaCallsign">Callsign</p>
+            </div>
+          </div>
+          <div class="flight-number">
+            <h2 id="flightNumber">FLY001</h2>
+          </div>
+        </div>
+
+        <!-- Flight Route -->
+        <div class="flight-route">
+          <div class="airport">
+            <div class="airport-code" id="departureIcao">LFPG</div>
+            <div class="airport-name" id="departureName">Paris Charles de Gaulle</div>
+          </div>
+          <div class="route-line">
+            <div class="route-arrow"></div>
+          </div>
+          <div class="airport">
+            <div class="airport-code" id="arrivalIcao">KJFK</div>
+            <div class="airport-name" id="arrivalName">New York JFK</div>
+          </div>
+        </div>
+
+        <!-- Flight Info Grid -->
+        <div class="flight-info-grid">
+          <div class="info-item">
+            <div class="info-label">Type d'appareil</div>
+            <div class="info-value" id="aircraftType">B777-300ER</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Immatriculation</div>
+            <div class="info-value" id="registration">N/A</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Type de route</div>
+            <div class="info-value" id="routeType">Civil</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Statut</div>
+            <div id="flightStatus" class="status-badge status-reserved">Réservé</div>
+          </div>
+        </div>
+
+        <!-- Flight Progress (shown during flight) -->
+        <div id="flightProgress" class="flight-progress" style="display: none;">
+          <div class="progress-header">
+            <h3>Progression du vol</h3>
+            <span id="progressPercentage">0%</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar" id="progressBar" style="width: 0%;">
+              <span class="progress-plane">✈️</span>
+            </div>
+            <div class="progress-text" id="progressText">En attente de départ</div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+          <button id="btnStart" class="btn btn-start" onclick="startFlight()">
+            🛫 Démarrer le vol
+          </button>
+          <button id="btnEnd" class="btn btn-end" onclick="endFlight()" style="display: none;">
+            🛬 Terminer le vol
+          </button>
+          <button class="btn btn-cancel" onclick="cancelFlight()">
+            ❌ Annuler
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="../services/api.js"></script>
+  <script src="../services/flight-tracker.js"></script>
+  <script>
+    let currentFlight = null;
+    let flightTracker = null;
+
+    // Check authentication
+    if (!StorageService.isAuthenticated()) {
+      window.location.href = 'login.html';
+    }
+
+    // Load user info
+    const auth = StorageService.getAuth();
+    document.getElementById('userName').textContent = auth.username;
+
+    // Logout function
+    function logout() {
+      if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+        if (flightTracker) {
+          flightTracker.stop();
+        }
+        StorageService.clearAuth();
+        window.location.href = 'login.html';
+      }
+    }
+
+    // Load active reservation
+    async function loadReservation() {
+      const loadingState = document.getElementById('loadingState');
+      const noReservationState = document.getElementById('noReservationState');
+      const reservationCard = document.getElementById('reservationCard');
+
+      try {
+        const reservation = await APIService.getActiveReservation(auth.userId, auth.token);
+
+        if (reservation && reservation.flight) {
+          currentFlight = reservation.flight;
+          displayReservation(reservation);
+          
+          loadingState.style.display = 'none';
+          reservationCard.style.display = 'block';
+
+          // If flight is in progress, initialize tracker
+          if (currentFlight.status === 'in_progress') {
+            initializeTracker();
+          }
+        } else {
+          loadingState.style.display = 'none';
+          noReservationState.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Error loading reservation:', error);
+        loadingState.style.display = 'none';
+        noReservationState.style.display = 'block';
+      }
+    }
+
+    // Display reservation details
+    function displayReservation(data) {
+      const { flight, route, va, fleet } = data;
+
+      console.log('VA Logo URL:', va.logo_url);
+
+      // Set VA branding colors
+      if (va.primary_color) {
+        document.documentElement.style.setProperty('--primary-color', va.primary_color);
+        document.getElementById('vaBrandingBar').style.background = va.primary_color;
+      }
+      if (va.secondary_color) {
+        document.documentElement.style.setProperty('--secondary-color', va.secondary_color);
+      }
+      if (va.accent_color) {
+        document.documentElement.style.setProperty('--accent-color', va.accent_color);
+      }
+
+      // Set VA info with logo
+      const vaLogoElement = document.getElementById('vaLogo');
+      if (va.logo_url && va.logo_url.trim() !== '') {
+        // Si le logo_url est une URL complète, l'utiliser directement
+        if (va.logo_url.startsWith('http://') || va.logo_url.startsWith('https://')) {
+          vaLogoElement.src = va.logo_url;
+        } 
+        // Si c'est un chemin relatif vers uploads
+        else if (va.logo_url.startsWith('/uploads/')) {
+          vaLogoElement.src = 'http://localhost:3000' + va.logo_url;
+        }
+        // Sinon, chemin complet fourni
+        else {
+          vaLogoElement.src = va.logo_url;
+        }
+        
+        // Gestion des erreurs de chargement
+        vaLogoElement.onerror = function() {
+          console.error('Erreur chargement logo:', va.logo_url);
+          this.src = '../../logos/logo_flynova.png';
+        };
+      } else {
+        // Utiliser le logo par défaut si pas de logo_url
+        vaLogoElement.src = '../../logos/logo_flynova.png';
+      }
+      
+      document.getElementById('vaName').textContent = va.name;
+      document.getElementById('vaCallsign').textContent = va.callsign;
+
+      // Set flight info
+      document.getElementById('flightNumber').textContent = route.flight_number;
+      document.getElementById('departureIcao').textContent = route.departure_icao;
+      document.getElementById('departureName').textContent = route.departure_name;
+      document.getElementById('arrivalIcao').textContent = route.arrival_icao;
+      document.getElementById('arrivalName').textContent = route.arrival_name;
+      document.getElementById('aircraftType').textContent = route.aircraft_type || 'N/A';
+      document.getElementById('routeType').textContent = route.route_type;
+      
+      if (fleet) {
+        document.getElementById('registration').textContent = fleet.registration;
+      }
+
+      // Set status
+      updateFlightStatus(flight.status);
+    }
+
+    // Update flight status display
+    function updateFlightStatus(status) {
+      const statusBadge = document.getElementById('flightStatus');
+      const btnStart = document.getElementById('btnStart');
+      const btnEnd = document.getElementById('btnEnd');
+      const flightProgress = document.getElementById('flightProgress');
+
+      statusBadge.className = 'status-badge';
+
+      switch (status) {
+        case 'reserved':
+          statusBadge.classList.add('status-reserved');
+          statusBadge.textContent = 'Réservé';
+          btnStart.style.display = 'block';
+          btnEnd.style.display = 'none';
+          flightProgress.style.display = 'none';
+          break;
+        case 'in_progress':
+          statusBadge.classList.add('status-in-progress');
+          statusBadge.textContent = 'En cours';
+          btnStart.style.display = 'none';
+          btnEnd.style.display = 'block';
+          flightProgress.style.display = 'block';
+          break;
+        case 'completed':
+          statusBadge.classList.add('status-completed');
+          statusBadge.textContent = 'Terminé';
+          btnStart.style.display = 'none';
+          btnEnd.style.display = 'none';
+          break;
+      }
+
+      if (currentFlight) {
+        currentFlight.status = status;
+      }
+    }
+
+    // Start flight
+    async function startFlight() {
+      if (!currentFlight) return;
+
+      if (confirm('Démarrer le vol maintenant ?')) {
+        try {
+          const btnStart = document.getElementById('btnStart');
+          btnStart.disabled = true;
+          btnStart.textContent = 'Démarrage...';
+
+          await APIService.updateFlightStatus(currentFlight.id, 'in_progress', auth.token);
+          updateFlightStatus('in_progress');
+          
+          // Initialize flight tracker
+          initializeTracker();
+
+          alert('Vol démarré avec succès !');
+        } catch (error) {
+          console.error('Error starting flight:', error);
+          alert('Erreur lors du démarrage du vol');
+          btnStart.disabled = false;
+          btnStart.textContent = '🛫 Démarrer le vol';
+        }
+      }
+    }
+
+    // Initialize flight tracker
+    function initializeTracker() {
+      if (!flightTracker) {
+        flightTracker = new FlightTracker(currentFlight, auth.token);
+        flightTracker.onUpdate = (data) => {
+          updateProgress(data);
+        };
+        flightTracker.start();
+      }
+    }
+
+    // Update flight progress
+    function updateProgress(data) {
+      const progressBar = document.getElementById('progressBar');
+      const progressPercentage = document.getElementById('progressPercentage');
+      const progressText = document.getElementById('progressText');
+
+      const percentage = Math.min(100, Math.max(0, data.progress || 0));
+      
+      progressBar.style.width = `${percentage}%`;
+      progressPercentage.textContent = `${percentage.toFixed(1)}%`;
+      
+      if (data.phase) {
+        progressText.textContent = data.phase;
+      }
+    }
+
+    // End flight
+    async function endFlight() {
+      if (!currentFlight) return;
+
+      if (confirm('Terminer le vol et envoyer le rapport ?')) {
+        try {
+          const btnEnd = document.getElementById('btnEnd');
+          btnEnd.disabled = true;
+          btnEnd.textContent = 'Envoi en cours...';
+
+          // Get flight data from tracker
+          const flightData = flightTracker ? flightTracker.getFlightData() : {};
+
+          // Submit flight report
+          await APIService.submitFlightReport(currentFlight.id, flightData, auth.token);
+          
+          // Stop tracker
+          if (flightTracker) {
+            flightTracker.stop();
+          }
+
+          alert('Vol terminé et rapport envoyé avec succès !');
+          
+          // Reload to show new state
+          location.reload();
+        } catch (error) {
+          console.error('Error ending flight:', error);
+          alert('Erreur lors de la soumission du rapport');
+          btnEnd.disabled = false;
+          btnEnd.textContent = '🛬 Terminer le vol';
+        }
+      }
+    }
+
+    // Cancel flight
+    async function cancelFlight() {
+      if (!currentFlight) return;
+
+      if (confirm('Êtes-vous sûr de vouloir annuler ce vol ? Cette action supprimera la réservation.')) {
+        try {
+          await APIService.cancelFlight(currentFlight.id, auth.token);
+          
+          // Stop tracker if running
+          if (flightTracker) {
+            flightTracker.stop();
+          }
+
+          alert('Vol annulé avec succès');
+          location.reload();
+        } catch (error) {
+          console.error('Error canceling flight:', error);
+          alert('Erreur lors de l\'annulation du vol');
+        }
+      }
+    }
+
+    // Load reservation on page load
+    loadReservation();
+  </script>
+</body>
+</html>

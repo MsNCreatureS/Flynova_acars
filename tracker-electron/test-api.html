@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test API ACARS</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #fff;
+    }
+    .test-section {
+      background: #2a2a2a;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 10px;
+      border: 1px solid #404040;
+    }
+    button {
+      background: #00c853;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #00a843;
+    }
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      background: #1a1a1a;
+      border-radius: 5px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .success { color: #4caf50; }
+    .error { color: #ff5252; }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+      background: #1a1a1a;
+      border: 1px solid #404040;
+      color: #fff;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Test API ACARS - FlyNova</h1>
+
+  <div class="test-section">
+    <h2>1. Test Connexion API</h2>
+    <button onclick="testAPI()">Tester /api/acars/test</button>
+    <div id="testResult" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Test Login</h2>
+    <input type="text" id="username" placeholder="Username" value="testpilot">
+    <input type="password" id="password" placeholder="Password" value="test123">
+    <button onclick="testLogin()">Tester Login</button>
+    <div id="loginResult" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Test Vol Actif</h2>
+    <input type="text" id="userId" placeholder="User ID" value="1">
+    <input type="text" id="token" placeholder="Token (depuis login)">
+    <button onclick="testActiveFlight()">Tester Vol Actif</button>
+    <div id="flightResult" class="result"></div>
+  </div>
+
+  <script>
+    const API_BASE_URL = 'http://localhost:3001/api/acars';
+
+    async function testAPI() {
+      const resultDiv = document.getElementById('testResult');
+      resultDiv.innerHTML = '⏳ Test en cours...';
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/test`);
+        const data = await response.json();
+        
+        resultDiv.innerHTML = `<span class="success">✅ Succès!</span>\n${JSON.stringify(data, null, 2)}`;
+      } catch (error) {
+        resultDiv.innerHTML = `<span class="error">❌ Erreur:</span>\n${error.message}`;
+      }
+    }
+
+    async function testLogin() {
+      const resultDiv = document.getElementById('loginResult');
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      
+      resultDiv.innerHTML = '⏳ Test login...';
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          // Sauvegarder le token pour les tests suivants
+          if (data.token) {
+            document.getElementById('token').value = data.token;
+            if (data.user && data.user.id) {
+              document.getElementById('userId').value = data.user.id;
+            }
+          }
+          resultDiv.innerHTML = `<span class="success">✅ Login réussi!</span>\n${JSON.stringify(data, null, 2)}`;
+        } else {
+          resultDiv.innerHTML = `<span class="error">❌ Erreur ${response.status}:</span>\n${JSON.stringify(data, null, 2)}`;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<span class="error">❌ Erreur:</span>\n${error.message}`;
+      }
+    }
+
+    async function testActiveFlight() {
+      const resultDiv = document.getElementById('flightResult');
+      const userId = document.getElementById('userId').value;
+      const token = document.getElementById('token').value;
+      
+      if (!token) {
+        resultDiv.innerHTML = '<span class="error">❌ Veuillez d\'abord vous connecter pour obtenir un token</span>';
+        return;
+      }
+      
+      resultDiv.innerHTML = '⏳ Test récupération vol...';
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/flights/active/${userId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          resultDiv.innerHTML = `<span class="success">✅ Vol récupéré!</span>\n${JSON.stringify(data, null, 2)}`;
+        } else {
+          resultDiv.innerHTML = `<span class="error">❌ Erreur ${response.status}:</span>\n${JSON.stringify(data, null, 2)}`;
+        }
+      } catch (error) {
+        resultDiv.innerHTML = `<span class="error">❌ Erreur:</span>\n${error.message}`;
+      }
+    }
+  </script>
+</body>
+</html>
