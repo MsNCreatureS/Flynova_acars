@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,10 +19,10 @@
       </div>
       <div class="user-info">
         <div class="user-name">
-          <p id="userName">Pilote</p>
-          <span id="userStatus">En ligne</span>
+          <p id="userName">Pilot</p>
+          <span id="userStatus">Online</span>
         </div>
-        <button class="btn-logout" onclick="logout()">Déconnexion</button>
+        <button class="btn-logout" onclick="logout()">Logout</button>
       </div>
     </header>
 
@@ -31,15 +31,15 @@
       <!-- Loading State -->
       <div id="loadingState" class="loading">
         <div class="spinner"></div>
-        <p>Chargement de votre réservation...</p>
+        <p>Loading your reservation...</p>
       </div>
 
       <!-- No Reservation State -->
       <div id="noReservationState" class="no-reservation" style="display: none;">
         <div class="no-reservation-icon">✈️</div>
-        <h3>Aucune réservation active</h3>
-        <p>Vous n'avez actuellement aucun vol réservé.</p>
-        <p>Rendez-vous sur le site FlyNova pour réserver un vol.</p>
+        <h3>No Active Reservation</h3>
+        <p>You currently have no booked flights.</p>
+        <p>Visit the FlyNova website to book a flight.</p>
       </div>
 
       <!-- Reservation Card -->
@@ -79,47 +79,47 @@
         <!-- Flight Info Grid -->
         <div class="flight-info-grid">
           <div class="info-item">
-            <div class="info-label">Type d'appareil</div>
+            <div class="info-label">Aircraft Type</div>
             <div class="info-value" id="aircraftType">B777-300ER</div>
           </div>
           <div class="info-item">
-            <div class="info-label">Immatriculation</div>
+            <div class="info-label">Registration</div>
             <div class="info-value" id="registration">N/A</div>
           </div>
           <div class="info-item">
-            <div class="info-label">Type de route</div>
+            <div class="info-label">Route Type</div>
             <div class="info-value" id="routeType">Civil</div>
           </div>
           <div class="info-item">
-            <div class="info-label">Statut</div>
-            <div id="flightStatus" class="status-badge status-reserved">Réservé</div>
+            <div class="info-label">Status</div>
+            <div id="flightStatus" class="status-badge status-reserved">Reserved</div>
           </div>
         </div>
 
         <!-- Flight Progress (shown during flight) -->
         <div id="flightProgress" class="flight-progress" style="display: none;">
           <div class="progress-header">
-            <h3>Progression du vol</h3>
+            <h3>Flight Progress</h3>
             <span id="progressPercentage">0%</span>
           </div>
           <div class="progress-bar-container">
             <div class="progress-bar" id="progressBar" style="width: 0%;">
               <span class="progress-plane">✈️</span>
             </div>
-            <div class="progress-text" id="progressText">En attente de départ</div>
+            <div class="progress-text" id="progressText">Waiting for departure</div>
           </div>
         </div>
 
         <!-- Action Buttons -->
         <div class="action-buttons">
           <button id="btnStart" class="btn btn-start" onclick="startFlight()">
-            🛫 Démarrer le vol
+            🛫 Start Flight
           </button>
           <button id="btnEnd" class="btn btn-end" onclick="endFlight()" style="display: none;">
-            🛬 Terminer le vol
+            🛬 End Flight
           </button>
           <button class="btn btn-cancel" onclick="cancelFlight()">
-            ❌ Annuler
+            ❌ Cancel
           </button>
         </div>
       </div>
@@ -259,21 +259,21 @@
       switch (status) {
         case 'reserved':
           statusBadge.classList.add('status-reserved');
-          statusBadge.textContent = 'Réservé';
+          statusBadge.textContent = 'Reserved';
           btnStart.style.display = 'block';
           btnEnd.style.display = 'none';
           flightProgress.style.display = 'none';
           break;
         case 'in_progress':
           statusBadge.classList.add('status-in-progress');
-          statusBadge.textContent = 'En cours';
+          statusBadge.textContent = 'In Progress';
           btnStart.style.display = 'none';
           btnEnd.style.display = 'block';
           flightProgress.style.display = 'block';
           break;
         case 'completed':
           statusBadge.classList.add('status-completed');
-          statusBadge.textContent = 'Terminé';
+          statusBadge.textContent = 'Completed';
           btnStart.style.display = 'none';
           btnEnd.style.display = 'none';
           break;
@@ -288,11 +288,11 @@
     async function startFlight() {
       if (!currentFlight) return;
 
-      if (confirm('Démarrer le vol maintenant ?')) {
+      if (confirm('Start flight now?')) {
         try {
           const btnStart = document.getElementById('btnStart');
           btnStart.disabled = true;
-          btnStart.textContent = 'Démarrage...';
+          btnStart.textContent = 'Starting...';
 
           await APIService.updateFlightStatus(currentFlight.id, 'in_progress', auth.token);
           updateFlightStatus('in_progress');
@@ -300,24 +300,49 @@
           // Initialize flight tracker
           initializeTracker();
 
-          alert('Vol démarré avec succès !');
+          alert('Flight started successfully!');
         } catch (error) {
           console.error('Error starting flight:', error);
-          alert('Erreur lors du démarrage du vol');
+          alert('Error starting flight');
           btnStart.disabled = false;
-          btnStart.textContent = '🛫 Démarrer le vol';
+          btnStart.textContent = '🛫 Start Flight';
         }
       }
     }
 
     // Initialize flight tracker
-    function initializeTracker() {
+    async function initializeTracker() {
       if (!flightTracker) {
-        flightTracker = new FlightTracker(currentFlight, auth.token);
-        flightTracker.onUpdate = (data) => {
-          updateProgress(data);
-        };
-        flightTracker.start();
+        try {
+          flightTracker = new FlightTracker(currentFlight, auth.token);
+          flightTracker.onUpdate = (data) => {
+            updateProgress(data);
+          };
+          await flightTracker.start();
+        } catch (error) {
+          console.error('❌ Tracker initialization failed:', error);
+          
+          // Show error to user
+          alert(error.message || 'Error connecting to simulator.\n\nPlease verify that MSFS 2020 is running and you are in flight.');
+          
+          // Revert flight status
+          try {
+            await APIService.updateFlightStatus(currentFlight.id, 'reserved', auth.token);
+            updateFlightStatus('reserved');
+          } catch (e) {
+            console.error('Failed to revert status:', e);
+          }
+          
+          // Re-enable start button
+          const btnStart = document.getElementById('btnStart');
+          btnStart.disabled = false;
+          btnStart.textContent = '🛫 Start Flight';
+          
+          // Clean up tracker
+          flightTracker = null;
+          
+          throw error;
+        }
       }
     }
 
@@ -345,7 +370,7 @@
         try {
           const btnEnd = document.getElementById('btnEnd');
           btnEnd.disabled = true;
-          btnEnd.textContent = 'Envoi en cours...';
+          btnEnd.textContent = 'Submitting...';
 
           // Get flight data from tracker
           const flightData = flightTracker ? flightTracker.getFlightData() : {};
@@ -358,15 +383,15 @@
             flightTracker.stop();
           }
 
-          alert('Vol terminé et rapport envoyé avec succès !');
+          alert('Flight completed and report submitted successfully!');
           
           // Reload to show new state
           location.reload();
         } catch (error) {
           console.error('Error ending flight:', error);
-          alert('Erreur lors de la soumission du rapport');
+          alert('Error submitting report');
           btnEnd.disabled = false;
-          btnEnd.textContent = '🛬 Terminer le vol';
+          btnEnd.textContent = '🛬 End Flight';
         }
       }
     }
@@ -375,7 +400,7 @@
     async function cancelFlight() {
       if (!currentFlight) return;
 
-      if (confirm('Êtes-vous sûr de vouloir annuler ce vol ? Cette action supprimera la réservation.')) {
+      if (confirm('Are you sure you want to cancel this flight? This will delete the reservation.')) {
         try {
           await APIService.cancelFlight(currentFlight.id, auth.token);
           
@@ -384,11 +409,11 @@
             flightTracker.stop();
           }
 
-          alert('Vol annulé avec succès');
+          alert('Flight cancelled successfully');
           location.reload();
         } catch (error) {
           console.error('Error canceling flight:', error);
-          alert('Erreur lors de l\'annulation du vol');
+          alert('Error cancelling flight');
         }
       }
     }

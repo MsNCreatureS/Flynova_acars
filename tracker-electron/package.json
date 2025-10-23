@@ -23,7 +23,8 @@
     "electron-builder": "^24.9.1"
   },
   "dependencies": {
-    "axios": "^1.6.2"
+    "axios": "^1.6.2",
+    "node-simconnect": "^4.0.0"
   },
   "build": {
     "appId": "com.flynova.acars",

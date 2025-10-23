@@ -1,6 +1,9 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 
+// Initialize SimConnect service (IPC handlers)
+const simConnectService = require('./src/services/simconnect-main');
+
 let mainWindow;
 
 function createWindow() {

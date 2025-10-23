@@ -112,10 +112,8 @@ class FlightTracker {
       console.log('P3D not detected');
     }
 
-    // Fallback to simulation mode for testing
-    console.warn('No simulator detected, using simulation mode');
-    this.simulator = new SimulationConnector();
-    await this.simulator.connect();
+    // No simulator available - throw error
+    throw new Error('❌ No simulator detected!\n\n⚠️ Please launch MSFS 2020, X-Plane or P3D before starting the flight.\n\n💡 The simulator must be in flight (not in main menu).');
   }
 
   async update() {
@@ -268,19 +266,32 @@ class FlightTracker {
   }
 
   getFlightData() {
-    return {
-      actual_departure_time: this.flightData.departureTime,
-      actual_arrival_time: this.flightData.arrivalTime,
-      flight_duration: this.flightData.duration,
-      distance_flown: this.flightData.distanceFlown.toFixed(2),
-      fuel_used: this.flightData.fuelUsed.toFixed(2),
-      landing_rate: this.flightData.landingRate.toFixed(2),
+    // Format dates to MySQL datetime format (YYYY-MM-DD HH:MM:SS)
+    const formatDateTime = (date) => {
+      if (!date) return null;
+      const d = new Date(date);
+      return d.toISOString().slice(0, 19).replace('T', ' ');
+    };
+
+    // Capture current time as arrival time
+    const arrivalTime = new Date();
+
+    const reportData = {
+      actual_departure_time: formatDateTime(this.flightData.departureTime),
+      actual_arrival_time: formatDateTime(arrivalTime),
+      flight_duration: this.flightData.duration || 0,
+      distance_flown: parseFloat(this.flightData.distanceFlown.toFixed(2)),
+      fuel_used: parseFloat(this.flightData.fuelUsed.toFixed(2)),
+      landing_rate: Math.abs(parseFloat(this.flightData.landingRate.toFixed(2))),
       telemetry_data: {
-        max_altitude: this.flightData.maxAltitude,
-        max_speed: this.flightData.maxSpeed,
-        telemetry_points: this.flightData.telemetry.slice(0, 1000) // Limit size
+        max_altitude: this.flightData.maxAltitude || 0,
+        max_speed: this.flightData.maxSpeed || 0,
+        telemetry_points: this.flightData.telemetry.slice(0, 100) // Limit to 100 points
       }
     };
+
+    console.log('📊 Flight report data:', reportData);
+    return reportData;
   }
 }
 
@@ -299,35 +310,85 @@ class SimulatorConnector {
   }
 }
 
-// MSFS Connector (SimConnect)
+// MSFS Connector (SimConnect via IPC)
 class MSFSConnector extends SimulatorConnector {
   constructor() {
     super();
+    this.simconnect = null;
     this.connected = false;
   }
 
   async connect() {
-    // TODO: Implement SimConnect connection
-    // This requires native module or WebSocket bridge
-    throw new Error('MSFS SimConnect not available');
+    try {
+      // Use IPC client to connect via main process
+      // Need to use absolute path since we're loaded from HTML context
+      const { ipcRenderer } = require('electron');
+      
+      // Direct IPC connection without separate module
+      console.log('🔌 [Renderer] Requesting SimConnect connection...');
+      const result = await ipcRenderer.invoke('simconnect:connect');
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to connect to SimConnect');
+      }
+      
+      this.connected = true;
+      this.ipcRenderer = ipcRenderer;
+      console.log('✅ Successfully connected to MSFS via SimConnect');
+    } catch (error) {
+      console.error('❌ Failed to connect to MSFS:', error.message);
+      throw error;
+    }
   }
 
   async disconnect() {
+    if (this.connected && this.ipcRenderer) {
+      try {
+        await this.ipcRenderer.invoke('simconnect:disconnect');
+      } catch (error) {
+        console.warn('Error disconnecting SimConnect:', error);
+      }
+      this.ipcRenderer = null;
+    }
     this.connected = false;
   }
 
   async getData() {
-    // TODO: Request data from SimConnect
-    return {
-      latitude: 0,
-      longitude: 0,
-      altitude: 0,
-      groundSpeed: 0,
-      heading: 0,
-      verticalSpeed: 0,
-      onGround: true,
-      fuel: 100
-    };
+    if (!this.connected || !this.ipcRenderer) {
+      throw new Error('Not connected to MSFS');
+    }
+
+    try {
+      const result = await this.ipcRenderer.invoke('simconnect:getData');
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to get data');
+      }
+      
+      // Return the data in the expected format
+      return {
+        latitude: result.data.latitude,
+        longitude: result.data.longitude,
+        altitude: result.data.indicatedAltitude,
+        groundSpeed: result.data.groundSpeed,
+        heading: result.data.heading,
+        verticalSpeed: result.data.verticalSpeed,
+        onGround: result.data.onGround,
+        fuel: result.data.fuel
+      };
+    } catch (error) {
+      console.error('❌ Error getting MSFS data:', error);
+      return {
+        latitude: 0,
+        longitude: 0,
+        altitude: 0,
+        groundSpeed: 0,
+        heading: 0,
+        verticalSpeed: 0,
+        onGround: true,
+        fuel: 0
+      };
+    }
   }
 }
 
@@ -393,74 +454,6 @@ class P3DConnector extends SimulatorConnector {
   }
 }
 
-// Simulation Mode Connector (for testing without simulator)
-class SimulationConnector extends SimulatorConnector {
-  constructor() {
-    super();
-    this.connected = false;
-    this.simulationTime = 0;
-    this.totalFlightTime = 120 * 60; // 120 minutes in seconds
-  }
+// Note: Simulation mode has been removed
+// The tracker now requires a real simulator (MSFS, X-Plane, or P3D) to be running
 
-  async connect() {
-    this.connected = true;
-    console.log('Simulation mode activated');
-  }
-
-  async disconnect() {
-    this.connected = false;
-  }
-
-  async getData() {
-    // Simulate a complete flight
-    this.simulationTime += 1;
-    const progress = Math.min(1, this.simulationTime / this.totalFlightTime);
-
-    let altitude = 0;
-    let verticalSpeed = 0;
-    let groundSpeed = 0;
-    let onGround = true;
-
-    // Simulate flight phases
-    if (progress < 0.05) {
-      // Taxi
-      groundSpeed = 20;
-      onGround = true;
-    } else if (progress < 0.15) {
-      // Takeoff and climb
-      altitude = (progress - 0.05) * 350000; // Up to 35000ft
-      verticalSpeed = 2000;
-      groundSpeed = 250 + (progress * 200);
-      onGround = false;
-    } else if (progress < 0.8) {
-      // Cruise
-      altitude = 35000;
-      verticalSpeed = 0;
-      groundSpeed = 450;
-      onGround = false;
-    } else if (progress < 0.95) {
-      // Descent
-      altitude = 35000 - ((progress - 0.8) * 233333); // Down from 35000ft
-      verticalSpeed = -1500;
-      groundSpeed = 300 - ((progress - 0.8) * 1000);
-      onGround = false;
-    } else {
-      // Landing and taxi
-      altitude = 0;
-      verticalSpeed = 0;
-      groundSpeed = Math.max(0, 50 - ((progress - 0.95) * 1000));
-      onGround = true;
-    }
-
-    return {
-      latitude: 48.8566 + (progress * 10), // Simulate movement
-      longitude: 2.3522 + (progress * 10),
-      altitude: Math.max(0, altitude),
-      groundSpeed: Math.max(0, groundSpeed),
-      heading: 270,
-      verticalSpeed,
-      onGround,
-      fuel: 100 - (progress * 50)
-    };
-  }
-}

@@ -69,23 +69,33 @@ class APIService {
 
   static async submitFlightReport(flightId, reportData, token) {
     try {
+      const payload = {
+        flight_id: flightId,
+        ...reportData
+      };
+
+      console.log('📤 Sending flight report:', payload);
+
       const response = await fetch(`${API_BASE_URL}/flight-reports`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          flight_id: flightId,
-          ...reportData
-        })
+        body: JSON.stringify(payload)
       });
 
+      console.log('📥 Response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to submit flight report');
+        const errorText = await response.text();
+        console.error('❌ Server error response:', errorText);
+        throw new Error(`Failed to submit flight report: ${response.status} ${errorText}`);
       }
 
-      return await response.json();
+      const result = await response.json();
+      console.log('✅ Flight report submitted successfully:', result);
+      return result;
     } catch (error) {
       console.error('Submit report error:', error);
       throw error;
