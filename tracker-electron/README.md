@@ -11,6 +11,8 @@ Tracker de vol pour MSFS, X-Plane et Prepar3D développé avec Electron.js pour 
 - 📈 **Progression visuelle** : Barre de progression du vol en temps réel
 - 📝 **Rapports automatiques** : Génération et envoi automatique des rapports ACARS
 - 🏆 **Système de points** : Attribution automatique de points selon les performances
+- 🔔 **Notifications modernes** : Pop-ups et notifications élégantes (plus de `alert()` !)
+- 💬 **Modales interactives** : Confirmations modernes avec animations fluides
 
 ## 📋 Prérequis
 
@@ -162,12 +164,17 @@ tracker-electron/
 ├── main.js                          # Point d'entrée Electron
 ├── package.json                     # Configuration npm
 ├── api-endpoints-example.js         # Exemples d'endpoints API
+├── test-notifications.html          # Démo du système de notifications
+├── NOTIFICATION-SYSTEM.md           # Documentation complète notifications
+├── NOTIFICATIONS-README.md          # Guide d'installation notifications
+├── NOTIFICATION-COMPLETE.md         # Récapitulatif notifications
 ├── src/
 │   ├── pages/
 │   │   ├── login.html              # Page de connexion
 │   │   └── dashboard.html          # Dashboard principal
 │   ├── services/
 │   │   ├── api.js                  # Service API
+│   │   ├── notification.js         # Service de notifications ⭐ NOUVEAU
 │   │   └── flight-tracker.js       # Service de tracking
 │   └── styles/
 │       └── main.css                # Styles CSS
@@ -209,8 +216,28 @@ L'application sera disponible dans le dossier `dist/`
 - Vérifier le statut du vol dans la BDD
 - Consulter la console développeur (F12)
 
-## 📝 TODO / Améliorations Futures
+## � Système de Notifications
 
+Le tracker utilise un système moderne de notifications :
+
+### Notifications Toast
+- ✅ Success (vert) - Opérations réussies
+- ❌ Error (rouge) - Erreurs et problèmes
+- ⚠️ Warning (orange) - Avertissements
+- ℹ️ Info (bleu) - Informations générales
+
+### Modales Interactives
+- Confirmations modernes avec animations
+- 3 types : confirm, warning, error
+- Personnalisables et responsive
+
+**Documentation** : Voir `NOTIFICATION-SYSTEM.md` pour plus de détails
+
+**Démo** : Ouvrir `test-notifications.html` pour tester toutes les fonctionnalités
+
+## �📝 TODO / Améliorations Futures
+
+- [x] ~~Notifications modernes~~ ✅ **Terminé**
 - [ ] Implémentation complète SimConnect pour MSFS/P3D
 - [ ] Implémentation UDP pour X-Plane
 - [ ] Carte en temps réel du vol
@@ -218,7 +245,6 @@ L'application sera disponible dans le dossier `dist/`
 - [ ] Export des rapports en PDF
 - [ ] Multi-langue (FR/EN)
 - [ ] Mode hors-ligne avec synchronisation
-- [ ] Notifications push
 - [ ] Integration SimBrief
 
 ## 👨‍💻 Développement

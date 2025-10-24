@@ -126,6 +126,7 @@
   </div>
 
   <script src="../services/api.js"></script>
+  <script src="../services/notification.js"></script>
   <script src="../services/flight-tracker.js"></script>
   <script>
     let currentFlight = null;
@@ -141,13 +142,26 @@
     document.getElementById('userName').textContent = auth.username;
 
     // Logout function
-    function logout() {
-      if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+    async function logout() {
+      const confirmed = await Notification.confirm(
+        'Are you sure you want to logout?',
+        {
+          title: 'Confirm Logout',
+          confirmText: 'Logout',
+          cancelText: 'Cancel',
+          type: 'warning'
+        }
+      );
+      
+      if (confirmed) {
         if (flightTracker) {
           flightTracker.stop();
         }
         StorageService.clearAuth();
-        window.location.href = 'login.html';
+        Notification.success('Logged out successfully');
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 500);
       }
     }
 
@@ -287,7 +301,17 @@
     async function startFlight() {
       if (!currentFlight) return;
 
-      if (confirm('Start flight now?')) {
+      const confirmed = await Notification.confirm(
+        'Ready to start your flight? Make sure MSFS 2020 is running and you are in the aircraft.',
+        {
+          title: 'Start Flight',
+          confirmText: 'Start Flight',
+          cancelText: 'Not Yet',
+          type: 'confirm'
+        }
+      );
+
+      if (confirmed) {
         try {
           const btnStart = document.getElementById('btnStart');
           btnStart.disabled = true;
@@ -299,10 +323,10 @@
           // Initialize flight tracker
           initializeTracker();
 
-          alert('Flight started successfully!');
+          Notification.success('Flight started successfully! Have a safe flight!', 'Flight Started');
         } catch (error) {
           console.error('Error starting flight:', error);
-          alert('Error starting flight');
+          Notification.error(error.message || 'Failed to start flight. Please try again.', 'Error');
           btnStart.disabled = false;
           btnStart.textContent = '🛫 Start Flight';
         }
@@ -322,7 +346,11 @@
           console.error('❌ Tracker initialization failed:', error);
           
           // Show error to user
-          alert(error.message || 'Error connecting to simulator.\n\nPlease verify that MSFS 2020 is running and you are in flight.');
+          const errorMsg = error.message || 'Error connecting to simulator.';
+          Notification.error(
+            `${errorMsg}\n\nPlease verify that MSFS 2020 is running and you are in flight.`,
+            'Simulator Connection Error'
+          );
           
           // Revert flight status
           try {
@@ -358,7 +386,17 @@
     async function endFlight() {
       if (!currentFlight) return;
 
-      if (confirm('Terminer le vol et envoyer le rapport ?')) {
+      const confirmed = await Notification.confirm(
+        'Complete your flight and submit the flight report?',
+        {
+          title: 'End Flight',
+          confirmText: 'Complete Flight',
+          cancelText: 'Continue Flying',
+          type: 'confirm'
+        }
+      );
+
+      if (confirmed) {
         try {
           const btnEnd = document.getElementById('btnEnd');
           btnEnd.disabled = true;
@@ -375,13 +413,19 @@
             flightTracker.stop();
           }
 
-          alert('Flight completed and report submitted successfully!');
+          Notification.success(
+            'Your flight report has been submitted successfully! Great job, Captain!',
+            'Flight Completed'
+          );
           
           // Reload to show new state
-          location.reload();
+          setTimeout(() => location.reload(), 1500);
         } catch (error) {
           console.error('Error ending flight:', error);
-          alert('Error submitting report');
+          Notification.error(
+            error.message || 'Failed to submit flight report. Please try again.',
+            'Submission Error'
+          );
           btnEnd.disabled = false;
           btnEnd.textContent = '🛬 End Flight';
         }
@@ -392,7 +436,18 @@
     async function cancelFlight() {
       if (!currentFlight) return;
 
-      if (confirm('Are you sure you want to cancel this flight? This will delete the reservation.')) {
+      const confirmed = await Notification.confirm(
+        'Are you sure you want to cancel this flight? This will delete the reservation and cannot be undone.',
+        {
+          title: 'Cancel Flight',
+          confirmText: 'Yes, Cancel Flight',
+          cancelText: 'Keep Flight',
+          type: 'error',
+          icon: '⚠'
+        }
+      );
+
+      if (confirmed) {
         try {
           await APIService.cancelFlight(currentFlight.id, auth.token);
           
@@ -401,11 +456,14 @@
             flightTracker.stop();
           }
 
-          alert('Flight cancelled successfully');
-          location.reload();
+          Notification.warning('Flight cancelled successfully', 'Flight Cancelled');
+          setTimeout(() => location.reload(), 1000);
         } catch (error) {
           console.error('Error canceling flight:', error);
-          alert('Error cancelling flight');
+          Notification.error(
+            error.message || 'Failed to cancel flight. Please try again.',
+            'Cancellation Error'
+          );
         }
       }
     }

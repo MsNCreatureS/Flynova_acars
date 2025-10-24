@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test - Système de Notifications</title>
+  <link rel="stylesheet" href="src/styles/main.css">
+  <style>
+    .demo-container {
+      max-width: 1200px;
+      margin: 50px auto;
+      padding: 30px;
+      background: var(--card-bg);
+      border-radius: 20px;
+      border: 2px solid var(--border-color);
+    }
+
+    .demo-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .demo-header h1 {
+      color: var(--primary-color);
+      margin-bottom: 10px;
+    }
+
+    .demo-header p {
+      color: var(--text-secondary);
+    }
+
+    .demo-section {
+      margin-bottom: 40px;
+    }
+
+    .demo-section h2 {
+      color: var(--text-primary);
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .demo-btn {
+      padding: 15px 20px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: white;
+    }
+
+    .demo-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .demo-btn.success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    }
+
+    .demo-btn.error {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+
+    .demo-btn.warning {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    }
+
+    .demo-btn.info {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    }
+
+    .code-block {
+      background: var(--dark-bg);
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      margin-top: 10px;
+      overflow-x: auto;
+    }
+
+    .code-block code {
+      color: var(--primary-color);
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-container">
+    <div class="demo-header">
+      <h1>🔔 Système de Notifications - Démonstration</h1>
+      <p>Testez les différents types de notifications et modales</p>
+    </div>
+
+    <!-- Section: Notifications -->
+    <div class="demo-section">
+      <h2>📨 Notifications Toast</h2>
+      
+      <div class="demo-grid">
+        <button class="demo-btn success" onclick="testSuccess()">
+          ✓ Success Notification
+        </button>
+        <button class="demo-btn error" onclick="testError()">
+          ✕ Error Notification
+        </button>
+        <button class="demo-btn warning" onclick="testWarning()">
+          ⚠ Warning Notification
+        </button>
+        <button class="demo-btn info" onclick="testInfo()">
+          ℹ Info Notification
+        </button>
+      </div>
+
+      <div class="code-block">
+        <code>Notification.success('Operation completed successfully!');</code>
+      </div>
+    </div>
+
+    <!-- Section: Notifications avec durée personnalisée -->
+    <div class="demo-section">
+      <h2>⏱️ Durée Personnalisée</h2>
+      
+      <div class="demo-grid">
+        <button class="demo-btn info" onclick="testShort()">
+          ⚡ Courte (2s)
+        </button>
+        <button class="demo-btn info" onclick="testLong()">
+          🕐 Longue (10s)
+        </button>
+        <button class="demo-btn info" onclick="testPermanent()">
+          ∞ Permanente
+        </button>
+      </div>
+
+      <div class="code-block">
+        <code>Notification.notify('Message', 'info', 'Titre', 2000);</code>
+      </div>
+    </div>
+
+    <!-- Section: Notifications multiples -->
+    <div class="demo-section">
+      <h2>📚 Notifications Multiples</h2>
+      
+      <div class="demo-grid">
+        <button class="demo-btn info" onclick="testMultiple()">
+          🎯 Empiler 5 notifications
+        </button>
+        <button class="demo-btn success" onclick="testSequence()">
+          🔄 Séquence progressive
+        </button>
+      </div>
+
+      <div class="code-block">
+        <code>// Les notifications s'empilent automatiquement</code>
+      </div>
+    </div>
+
+    <!-- Section: Modales de confirmation -->
+    <div class="demo-section">
+      <h2>⚠️ Modales de Confirmation</h2>
+      
+      <div class="demo-grid">
+        <button class="demo-btn info" onclick="testConfirm()">
+          ? Confirmation Standard
+        </button>
+        <button class="demo-btn warning" onclick="testWarningModal()">
+          ⚠ Avertissement
+        </button>
+        <button class="demo-btn error" onclick="testDangerModal()">
+          ⛔ Action Dangereuse
+        </button>
+        <button class="demo-btn success" onclick="testCustomModal()">
+          ✨ Modale Personnalisée
+        </button>
+      </div>
+
+      <div class="code-block">
+        <code>const confirmed = await Notification.confirm('Message', options);</code>
+      </div>
+    </div>
+
+    <!-- Section: Cas d'usage réels -->
+    <div class="demo-section">
+      <h2>✈️ Cas d'Usage Réels</h2>
+      
+      <div class="demo-grid">
+        <button class="demo-btn success" onclick="testFlightStart()">
+          🛫 Démarrer un vol
+        </button>
+        <button class="demo-btn info" onclick="testFlightEnd()">
+          🛬 Terminer un vol
+        </button>
+        <button class="demo-btn error" onclick="testFlightCancel()">
+          ❌ Annuler une réservation
+        </button>
+        <button class="demo-btn warning" onclick="testLogout()">
+          🚪 Déconnexion
+        </button>
+      </div>
+    </div>
+
+    <!-- Section: Tests de connexion -->
+    <div class="demo-section">
+      <h2>🔌 Simulation d'erreurs</h2>
+      
+      <div class="demo-grid">
+        <button class="demo-btn error" onclick="testConnectionError()">
+          📡 Erreur de connexion
+        </button>
+        <button class="demo-btn error" onclick="testSimulatorError()">
+          🎮 Erreur SimConnect
+        </button>
+        <button class="demo-btn warning" onclick="testValidationError()">
+          📝 Erreur de validation
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="src/services/notification.js"></script>
+  <script>
+    // Tests de notifications simples
+    function testSuccess() {
+      Notification.success('Votre vol a été enregistré avec succès!', 'Succès');
+    }
+
+    function testError() {
+      Notification.error('Impossible de se connecter au serveur', 'Erreur');
+    }
+
+    function testWarning() {
+      Notification.warning('Carburant faible détecté', 'Attention');
+    }
+
+    function testInfo() {
+      Notification.info('Phase de vol changée en croisière', 'Information');
+    }
+
+    // Tests de durée
+    function testShort() {
+      Notification.notify('Notification courte (2 secondes)', 'info', 'Test Durée', 2000);
+    }
+
+    function testLong() {
+      Notification.notify('Notification longue (10 secondes)', 'info', 'Test Durée', 10000);
+    }
+
+    function testPermanent() {
+      Notification.notify(
+        'Cette notification reste affichée jusqu\'à ce que vous la fermiez',
+        'info',
+        'Permanente',
+        0
+      );
+    }
+
+    // Tests multiples
+    function testMultiple() {
+      Notification.success('Première notification');
+      setTimeout(() => Notification.info('Deuxième notification'), 200);
+      setTimeout(() => Notification.warning('Troisième notification'), 400);
+      setTimeout(() => Notification.error('Quatrième notification'), 600);
+      setTimeout(() => Notification.success('Cinquième notification'), 800);
+    }
+
+    function testSequence() {
+      Notification.info('Connexion en cours...', 'Étape 1/3');
+      setTimeout(() => {
+        Notification.info('Authentification...', 'Étape 2/3');
+      }, 1500);
+      setTimeout(() => {
+        Notification.success('Connecté avec succès!', 'Étape 3/3');
+      }, 3000);
+    }
+
+    // Tests de modales
+    async function testConfirm() {
+      const confirmed = await Notification.confirm(
+        'Voulez-vous continuer cette action?',
+        {
+          title: 'Confirmation',
+          confirmText: 'Oui',
+          cancelText: 'Non'
+        }
+      );
+      
+      if (confirmed) {
+        Notification.success('Action confirmée!');
+      } else {
+        Notification.info('Action annulée');
+      }
+    }
+
+    async function testWarningModal() {
+      const confirmed = await Notification.confirm(
+        'Cette action peut avoir des conséquences. Êtes-vous sûr?',
+        {
+          title: 'Avertissement',
+          confirmText: 'Continuer',
+          cancelText: 'Annuler',
+          type: 'warning'
+        }
+      );
+      
+      if (confirmed) {
+        Notification.warning('Action exécutée avec avertissement');
+      }
+    }
+
+    async function testDangerModal() {
+      const confirmed = await Notification.confirm(
+        'Cette action est irréversible et supprimera toutes les données. Continuer?',
+        {
+          title: 'Action Dangereuse',
+          confirmText: 'Oui, supprimer',
+          cancelText: 'Non, garder',
+          type: 'error',
+          icon: '⛔'
+        }
+      );
+      
+      if (confirmed) {
+        Notification.error('Données supprimées', 'Action Destructive');
+      } else {
+        Notification.success('Données conservées', 'Annulé');
+      }
+    }
+
+    async function testCustomModal() {
+      const confirmed = await Notification.confirm(
+        'Cette modale utilise des textes et icônes personnalisés.',
+        {
+          title: '✨ Personnalisation',
+          confirmText: '👍 Super!',
+          cancelText: '👎 Non merci',
+          type: 'confirm',
+          icon: '🎨'
+        }
+      );
+      
+      Notification.info(confirmed ? 'Vous aimez!' : 'Pas votre style');
+    }
+
+    // Cas d'usage réels
+    async function testFlightStart() {
+      const confirmed = await Notification.confirm(
+        'Prêt à démarrer votre vol? Assurez-vous que MSFS 2020 est en cours d\'exécution.',
+        {
+          title: 'Démarrer le Vol',
+          confirmText: 'Démarrer',
+          cancelText: 'Pas encore',
+          type: 'confirm'
+        }
+      );
+      
+      if (confirmed) {
+        Notification.info('Connexion au simulateur...', 'Initialisation');
+        setTimeout(() => {
+          Notification.success('Vol démarré avec succès! Bon vol!', 'Vol Actif');
+        }, 2000);
+      }
+    }
+
+    async function testFlightEnd() {
+      const confirmed = await Notification.confirm(
+        'Terminer le vol et envoyer le rapport?',
+        {
+          title: 'Terminer le Vol',
+          confirmText: 'Terminer',
+          cancelText: 'Continuer',
+          type: 'confirm'
+        }
+      );
+      
+      if (confirmed) {
+        Notification.info('Envoi du rapport...', 'Traitement');
+        setTimeout(() => {
+          Notification.success(
+            'Rapport de vol soumis avec succès! Excellent travail, Capitaine!',
+            'Vol Terminé'
+          );
+        }, 2000);
+      }
+    }
+
+    async function testFlightCancel() {
+      const confirmed = await Notification.confirm(
+        'Êtes-vous sûr de vouloir annuler ce vol? Cette action supprimera la réservation.',
+        {
+          title: 'Annuler le Vol',
+          confirmText: 'Oui, annuler',
+          cancelText: 'Garder le vol',
+          type: 'error',
+          icon: '⚠'
+        }
+      );
+      
+      if (confirmed) {
+        Notification.warning('Vol annulé', 'Réservation Supprimée');
+      } else {
+        Notification.success('Vol conservé', 'Annulation Annulée');
+      }
+    }
+
+    async function testLogout() {
+      const confirmed = await Notification.confirm(
+        'Êtes-vous sûr de vouloir vous déconnecter?',
+        {
+          title: 'Déconnexion',
+          confirmText: 'Se déconnecter',
+          cancelText: 'Rester connecté',
+          type: 'warning'
+        }
+      );
+      
+      if (confirmed) {
+        Notification.success('Déconnexion réussie', 'À bientôt!');
+      }
+    }
+
+    // Simulation d'erreurs
+    function testConnectionError() {
+      Notification.error(
+        'Impossible de se connecter au serveur API.\n\nVérifiez votre connexion internet et réessayez.',
+        'Erreur de Connexion'
+      );
+    }
+
+    function testSimulatorError() {
+      Notification.error(
+        'Échec de la connexion au simulateur.\n\nAssurez-vous que MSFS 2020 est en cours d\'exécution et que vous êtes en vol.',
+        'Erreur SimConnect'
+      );
+    }
+
+    function testValidationError() {
+      Notification.warning(
+        'Veuillez remplir tous les champs requis avant de continuer.',
+        'Validation'
+      );
+    }
+
+    // Message de bienvenue
+    setTimeout(() => {
+      Notification.info(
+        'Cliquez sur les boutons pour tester le système de notifications!',
+        'Bienvenue',
+        7000
+      );
+    }, 500);
+  </script>
+</body>
+</html>
