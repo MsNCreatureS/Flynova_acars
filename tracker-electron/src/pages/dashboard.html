@@ -223,7 +223,7 @@
         } 
         // Si c'est un chemin relatif vers uploads
         else if (va.logo_url.startsWith('/uploads/')) {
-          vaLogoElement.src = 'http://localhost:3000' + va.logo_url;
+          vaLogoElement.src = 'https://flynova-backend-production.up.railway.app' + va.logo_url;
         }
         // Sinon, chemin complet fourni
         else {

@@ -1,12 +1,14 @@
 {
   "name": "flynova-acars-tracker",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "FlyNova ACARS Tracker for MSFS, X-Plane & P3D",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --watch",
-    "build": "electron-builder"
+    "build": "electron-builder --win --x64",
+    "build:portable": "electron-builder --win portable",
+    "build:all": "electron-builder --win --x64 --ia32"
   },
   "keywords": [
     "ACARS",
@@ -14,9 +16,14 @@
     "Tracker",
     "MSFS",
     "X-Plane",
-    "P3D"
+    "P3D",
+    "Virtual Airline",
+    "Flight Simulator"
   ],
-  "author": "FlyNova",
+  "author": {
+    "name": "FlyNova",
+    "email": "support@flynova.com"
+  },
   "license": "MIT",
   "devDependencies": {
     "electron": "^28.0.0",
@@ -28,10 +35,41 @@
   },
   "build": {
     "appId": "com.flynova.acars",
-    "productName": "FlyNova ACARS",
+    "productName": "FlyNova ACARS Tracker",
+    "copyright": "Copyright © 2025 FlyNova",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "src/**/*",
+      "logos/**/*",
+      "assets/**/*",
+      "config.js",
+      "package.json"
+    ],
     "win": {
-      "target": "nsis",
-      "icon": "assets/icon.ico"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "publisherName": "FlyNova",
+      "verifyUpdateCodeSignature": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "FlyNova ACARS",
+      "license": "LICENSE.txt",
+      "language": "1033"
     }
   }
 }

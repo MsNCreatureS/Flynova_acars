@@ -34,9 +34,13 @@ Tracker de vol pour MSFS, X-Plane et Prepar3D développé avec Electron.js pour 
 
 3. **Configurer l'API**
    - Ouvrir `src/services/api.js`
-   - Modifier `API_BASE_URL` avec l'URL de votre serveur backend
+   - L'application est configurée par défaut pour la **production** :
    ```javascript
-   const API_BASE_URL = 'http://localhost:3001/api'; // Votre URL
+   const API_BASE_URL = 'https://flynova-backend-production.up.railway.app/api/acars';
+   ```
+   - Pour le développement local, modifier vers :
+   ```javascript
+   const API_BASE_URL = 'http://localhost:3001/api/acars';
    ```
 
 4. **Lancer l'application**
@@ -258,9 +262,12 @@ npm run dev
 Créer un fichier `.env` :
 ```env
 NODE_ENV=development
-API_URL=http://localhost:3001/api
+API_URL=https://flynova-backend-production.up.railway.app/api
 JWT_SECRET=your-secret-key
 ```
+
+**Note** : L'application utilise par défaut l'API de production Railway.  
+Pour le développement local, voir [`API-PRODUCTION.md`](API-PRODUCTION.md)
 
 ## 📄 Licence
 

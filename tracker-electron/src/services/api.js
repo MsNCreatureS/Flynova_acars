@@ -1,5 +1,5 @@
 // API Configuration
-const API_BASE_URL = 'http://localhost:3001/api/acars'; // Routes ACARS
+const API_BASE_URL = 'https://flynova-backend-production.up.railway.app/api/acars'; // Routes ACARS - Production
 
 // API Service
 class APIService {
