@@ -175,7 +175,14 @@
         const reservation = await APIService.getActiveReservation(auth.userId, auth.token);
 
         if (reservation && reservation.flight) {
-          currentFlight = reservation.flight;
+          // Stocker toute la réservation avec route, va, fleet
+          currentFlight = {
+            ...reservation.flight,
+            route: reservation.route,
+            va: reservation.va,
+            fleet: reservation.fleet
+          };
+          
           displayReservation(reservation);
           
           loadingState.style.display = 'none';
@@ -223,7 +230,7 @@
         } 
         // Si c'est un chemin relatif vers uploads
         else if (va.logo_url.startsWith('/uploads/')) {
-          vaLogoElement.src = 'https://flynova-backend-production.up.railway.app' + va.logo_url;
+          vaLogoElement.src = 'https://flynova-backend-developpmeny.up.railway.app' + va.logo_url;
         }
         // Sinon, chemin complet fourni
         else {
@@ -379,6 +386,14 @@
       
       if (data.phase) {
         progressText.textContent = data.phase;
+      }
+
+      // Update aircraft type if available from simulator
+      if (data.aircraftType && data.aircraftType !== 'N/A') {
+        const aircraftTypeEl = document.getElementById('aircraftType');
+        if (aircraftTypeEl) {
+          aircraftTypeEl.textContent = data.aircraftType;
+        }
       }
     }
 

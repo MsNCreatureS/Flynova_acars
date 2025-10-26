@@ -1,6 +1,9 @@
 // Flight Tracker Service
 // Supports MSFS, X-Plane, and P3D
 
+// Discord sera mis à jour via IPC vers le main process
+const { ipcRenderer } = require('electron');
+
 class FlightTracker {
   constructor(flight, token) {
     this.flight = flight;
@@ -9,6 +12,26 @@ class FlightTracker {
     this.updateInterval = null;
     this.telemetryInterval = null;
     this.simulator = null;
+    this.discordEnabled = false;
+    
+    // Get aircraft from fleet reservation
+    let aircraftType = 'Unknown Aircraft';
+    if (flight.fleet) {
+      // Priorité: aircraft_name > aircraft_type > registration
+      aircraftType = flight.fleet.aircraft_name || 
+                     flight.fleet.aircraft_type || 
+                     flight.fleet.registration || 
+                     'Unknown Aircraft';
+      
+      // Si on a le registration, on l'ajoute
+      if (flight.fleet.registration && flight.fleet.aircraft_name) {
+        aircraftType = `${flight.fleet.aircraft_name} (${flight.fleet.registration})`;
+      } else if (flight.fleet.registration && flight.fleet.aircraft_type) {
+        aircraftType = `${flight.fleet.aircraft_type} (${flight.fleet.registration})`;
+      }
+    }
+    
+    console.log('✈️ Aircraft from fleet:', aircraftType, flight.fleet);
     
     // Flight data
     this.flightData = {
@@ -33,7 +56,8 @@ class FlightTracker {
       heading: 0,
       verticalSpeed: 0,
       onGround: true,
-      fuel: 0
+      fuel: 0,
+      aircraftType: aircraftType
     };
 
     this.lastState = { ...this.currentState };
@@ -51,6 +75,10 @@ class FlightTracker {
 
     // Detect simulator
     await this.detectSimulator();
+
+    // Discord Rich Presence sera mis à jour via IPC
+    this.discordEnabled = true;
+    console.log('✅ Discord Rich Presence will update during flight');
 
     // Start tracking loop
     this.updateInterval = setInterval(() => this.update(), 1000);
@@ -80,6 +108,18 @@ class FlightTracker {
 
     if (this.simulator) {
       this.simulator.disconnect();
+    }
+
+    // Remettre Discord en mode Idle via IPC
+    if (this.discordEnabled) {
+      ipcRenderer.invoke('discord-update', {
+        flight: {},
+        route: { flight_number: 'FlyNova ACARS', departure_icao: '', arrival_icao: '' },
+        va: { name: 'FlyNova' },
+        phase: 'Idle',
+        currentState: { aircraftType: 'Ready to fly', altitude: 0, groundSpeed: 0 }
+      }).catch(err => console.log('⚠️ Discord IPC update failed:', err.message));
+      this.discordEnabled = false;
     }
   }
 
@@ -128,8 +168,9 @@ class FlightTracker {
       // Save previous state BEFORE updating
       const previousState = this.lastState ? { ...this.lastState } : null;
       
-      // Update current state
-      this.currentState = { ...data };
+      // Update current state (keep aircraft type from reservation)
+      const aircraftType = this.currentState.aircraftType;
+      this.currentState = { ...data, aircraftType };
 
       // Debug: Log state transitions
       if (previousState && previousState.onGround !== this.currentState.onGround) {
@@ -171,6 +212,38 @@ class FlightTracker {
 
       // Store telemetry point EVERY SECOND for complete data
       this.storeTelemetry();
+
+      // Update Discord Rich Presence via IPC
+      if (this.discordEnabled) {
+        try {
+          const discordData = {
+            flight: this.flight.flight || this.flight,
+            route: this.flight.route || {},
+            va: this.flight.va || {},
+            phase: this.flightData.phase,
+            currentState: this.currentState
+          };
+          
+          // Log pour debug (première fois seulement)
+          if (!this._discordLoggedOnce) {
+            console.log('📡 Sending to Discord:', {
+              flightNumber: discordData.route?.flight_number,
+              departure: discordData.route?.departure_icao,
+              arrival: discordData.route?.arrival_icao,
+              va: discordData.va?.name,
+              phase: discordData.phase,
+              rawFlight: this.flight // Log l'objet complet pour debug
+            });
+            this._discordLoggedOnce = true;
+          }
+          
+          ipcRenderer.invoke('discord-update', discordData).catch(err => {
+            console.log('⚠️ Discord IPC update failed:', err.message);
+          });
+        } catch (error) {
+          console.log('⚠️ Discord update error:', error.message);
+        }
+      }
 
       // Update UI callback
       if (this.onUpdate) {

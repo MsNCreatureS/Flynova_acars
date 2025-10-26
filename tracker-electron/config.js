@@ -5,8 +5,8 @@
  */
 
 const CONFIG = {
-  // URL de votre API backend
-  API_BASE_URL: process.env.API_URL || 'https://flynova-backend-production.up.railway.app/api',
+  // URL de votre API backend (mode développement)
+  API_BASE_URL: process.env.API_URL || 'https://flynova-backend-developpmeny.up.railway.app/api',
   
   // Intervalle de mise à jour du tracker (en ms)
   UPDATE_INTERVAL: 1000, // 1 seconde

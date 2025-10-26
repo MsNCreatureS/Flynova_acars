@@ -15,8 +15,8 @@ const ENVIRONMENTS = {
     NAME: 'Développement Local'
   },
   production: {
-    API_BASE_URL: 'https://flynova-backend-production.up.railway.app/api/acars',
-    ASSETS_URL: 'https://flynova-backend-production.up.railway.app',
+    API_BASE_URL: 'https://flynova-backend-developpmeny.up.railway.app/api/acars',
+    ASSETS_URL: 'https://flynova-backend-developpmeny.up.railway.app',
     NAME: 'Production Railway'
   }
 };

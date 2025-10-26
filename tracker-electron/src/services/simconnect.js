@@ -15,7 +15,8 @@ class MSFSSimConnect {
       onGround: true,
       fuel: 100,
       indicatedAirspeed: 0,
-      indicatedAltitude: 0
+      indicatedAltitude: 0,
+      aircraftType: 'N/A'
     };
     
     // Data definition IDs
@@ -79,10 +80,37 @@ class MSFSSimConnect {
             heading: recvSimObjectData.data.readFloat64(),
             verticalSpeed: recvSimObjectData.data.readFloat64(),
             onGround: recvSimObjectData.data.readInt32() === 1,
-            fuel: recvSimObjectData.data.readFloat64()
+            fuel: recvSimObjectData.data.readFloat64(),
+            aircraftType: this.currentData.aircraftType || 'N/A' // Keep the aircraft type
           };
         } catch (error) {
           console.error('Error reading SimConnect data:', error);
+        }
+      } else if (recvSimObjectData.requestID === this.DATA_REQUEST_ID + 1) {
+        // This is the aircraft title (string data)
+        try {
+          console.log('📦 Received aircraft title data, buffer length:', recvSimObjectData.data.length);
+          
+          // Try to read the string data
+          let title = '';
+          try {
+            // Read as null-terminated string
+            title = recvSimObjectData.data.toString('utf8').replace(/\0/g, '').trim();
+          } catch (e) {
+            console.log('Failed to read as string, trying readString:', e.message);
+            title = recvSimObjectData.data.readString(256);
+          }
+          
+          console.log('✈️ Aircraft title received:', title);
+          
+          if (title && title.length > 0) {
+            this.currentData.aircraftType = title;
+            console.log('✅ Aircraft type updated to:', title);
+          } else {
+            console.log('⚠️ Empty aircraft title received');
+          }
+        } catch (error) {
+          console.error('❌ Error reading aircraft title:', error);
         }
       }
     });
@@ -179,10 +207,26 @@ class MSFSSimConnect {
       SimConnectDataType.FLOAT64
     );
 
+    // Define a separate data definition for aircraft title (string)
+    this.handle.addToDataDefinition(
+      this.DATA_DEFINITION_ID + 1,
+      'TITLE',
+      null,
+      SimConnectDataType.STRING256
+    );
+
     // Request data updates every second
     this.handle.requestDataOnSimObject(
       this.DATA_REQUEST_ID,
       this.DATA_DEFINITION_ID,
+      SimConnectConstants.OBJECT_ID_USER,
+      SimConnectPeriod.SECOND
+    );
+
+    // Request aircraft title every second (to detect aircraft changes)
+    this.handle.requestDataOnSimObject(
+      this.DATA_REQUEST_ID + 1,
+      this.DATA_DEFINITION_ID + 1,
       SimConnectConstants.OBJECT_ID_USER,
       SimConnectPeriod.SECOND
     );

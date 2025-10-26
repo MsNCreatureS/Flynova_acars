@@ -1,6 +1,6 @@
 {
   "name": "flynova-acars-tracker",
-  "version": "2.0.0",
+  "version": "1.0.1",
   "description": "FlyNova ACARS Tracker for MSFS, X-Plane & P3D",
   "main": "main.js",
   "scripts": {
@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "axios": "^1.6.2",
+    "discord-rpc": "^4.0.1",
     "node-simconnect": "^4.0.0"
   },
   "build": {
